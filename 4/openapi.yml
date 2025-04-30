@@ -1,0 +1,461 @@
+openapi: 3.0.3
+info:
+  title: Unified E-Commerce API
+  description: Combined API for Order Management and Authentication
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api
+    description: Unified API Gateway
+
+paths:
+  /auth/token:
+    post:
+      summary: Login For Access Token
+      operationId: login_for_access_token
+      tags:
+        - AuthService
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+
+  /auth/users/me:
+    get:
+      summary: Get Current User
+      operationId: get_current_user
+      tags:
+        - AuthService
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      security:
+        - bearerAuth: []
+
+  /auth/users/:
+    get:
+      summary: List Users
+      operationId: list_users
+      tags:
+        - AuthService
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+      security:
+        - bearerAuth: []
+    post:
+      summary: Create User
+      operationId: create_user
+      tags:
+        - AuthService
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+
+  /auth/users/{user_id}:
+    get:
+      summary: Get User
+      operationId: get_user
+      tags:
+        - AuthService
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+        - bearerAuth: []
+    delete:
+      summary: Delete User
+      operationId: delete_user
+      tags:
+        - AuthService
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted successfully
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+        - bearerAuth: []
+
+  # Order Service Endpoints
+  /orders/:
+    post:
+      summary: Create a new order
+      operationId: create_order
+      tags:
+        - OrdersService
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    get:
+      summary: Get list of user orders
+      operationId: list_orders
+      tags:
+        - OrdersService
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /orders/{order_id}:
+    get:
+      summary: Get a specific order by ID
+      operationId: get_order
+      tags:
+        - OrdersService
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    delete:
+      summary: Delete an order
+      operationId: delete_order
+      tags:
+        - OrdersService
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order deleted successfully
+
+  /orders/{order_id}/status:
+    put:
+      summary: Update order status
+      operationId: update_order_status
+      tags:
+        - OrdersService
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderUpdate'
+      responses:
+        '200':
+          description: Order updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Common
+    Role:
+      type: string
+      enum: [client, admin, courier, warehouse_manager]
+      description: User role in the system
+
+    # Auth Service
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        grant_type:
+          type: string
+          pattern: password
+          default: password
+
+    Token:
+      type: object
+      required: [access_token, token_type]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+
+    User:
+      type: object
+      required: [user_id, username]
+      properties:
+        user_id:
+          type: integer
+        username:
+          type: string
+        full_name:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+
+    UserCreate:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        full_name:
+          type: string
+        password:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+          default: client
+
+    # Order Service
+    OrderStatus:
+      type: string
+      enum: [created, processing, in_transit, delivered, cancelled]
+
+    PaymentMethod:
+      type: string
+      enum: [cash, card, online]
+
+    DeliveryType:
+      type: string
+      enum: [standard, express, pickup]
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+          maxLength: 100
+        city:
+          type: string
+          maxLength: 50
+        postal_code:
+          type: string
+          maxLength: 20
+        country:
+          type: string
+          maxLength: 50
+
+    OrderItem:
+      type: object
+      properties:
+        product_id:
+          type: integer
+        name:
+          type: string
+          maxLength: 100
+        quantity:
+          type: integer
+          minimum: 1
+        price:
+          type: number
+          minimum: 0.01
+
+    Order:
+      type: object
+      properties:
+        order_id:
+          type: integer
+        client_id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        total_amount:
+          type: number
+          minimum: 0.01
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethod'
+        delivery_type:
+          $ref: '#/components/schemas/DeliveryType'
+        delivery_address:
+          $ref: '#/components/schemas/Address'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        estimated_delivery:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    OrderCreate:
+      type: object
+      properties:
+        client_id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethod'
+        delivery_type:
+          $ref: '#/components/schemas/DeliveryType'
+        delivery_address:
+          $ref: '#/components/schemas/Address'
+          nullable: true
+        estimated_delivery:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    OrderUpdate:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+          nullable: true
+        estimated_delivery:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    # Common Error
+    HTTPValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+
+    ValidationError:
+      type: object
+      required: [loc, msg, type]
+      properties:
+        loc:
+          type: array
+          items:
+            type: string
+        msg:
+          type: string
+        type:
+          type: string
